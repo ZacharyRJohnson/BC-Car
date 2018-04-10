@@ -1,5 +1,6 @@
 from nanpy import ArduinoApi, SerialManager
 from NanMotor import Motor
+from robot import Robot
 import sys
 import pygame
 import time
@@ -9,25 +10,27 @@ class Controller(object):
         self.reset()
 
     def reset(self):
-        self.r2btn = 0
-        self.r2axis = 0
-        self.l2btn = 0
-        self.l2axis = 0
-        self.r1button = 0
-        self.l1button = 0
-        self.btn1 = 0  # x button
-        self.btn2 = 0  # circle button
-        self.btn3 = 0  # triangle button
-        self.btn4 = 0  # square button
-        self.rxaxis = 0
-        self.ryaxis = 0
-        self.lxaxis = 0
-        self.lyaxis = 0
+        self.btn0 = 0 # Square
+        self.btn1 = 0 # X
+        self.btn2 = 0 # Circle
+        self.btn3 = 0 # Triangle
+        self.btn4 = 0 # L1
+        self.btn5 = 0 # R1
+        self.btn6 = 0 # L2
+        self.btn7 = 0 # R2
+        self.btn8 = 0 # Share
+        self.axis0 = 0 # Left analog x axis
+        self.axis1 = 0 # Left analog y axis
+        self.axis2 = 0 # Right analog x axis
+        self.axis3 = -1.0 # L2 axis
+        self.axis4 = -1.0 # R2 axis
+        self.axis5 = 0 # Right analog y axis
 
 class RobotController(object):
-    def __init__(self):
+    def __init__(self, robo):
         self.cont = Controller()
         self.joystick = None
+        self.robot = robo
 
     def init_joystick(self):
         pygame.init()
@@ -35,14 +38,59 @@ class RobotController(object):
         self.joystick.init()
 
     def loop(self):
+        r2Pressed = 0
+        l2Pressed = 0
+        rAnalogMoved = 0
         while True:
             self.cont.reset()
+            pygame.event.pump()
 
             for i in range(0, self.joystick.get_numaxes()):
                 val = self.joystick.get_axis(i)
+                if i in range(8) and val != 0:
+                    tmp = "self.cont.axis" + str(i) + " = " + str(val)
+                    exec(tmp)
 
+            for i in range(0, self.joystick.get_numbuttons()):
+                if self.joystick.get_button(i) != 0:
+                    tmp = "self.cont.btn" + str(i) + " = 1"
+                    exec(tmp)
+
+            if self.cont.btn8:
+                break
+
+            if self.cont.btn0:
+                self.robot.stop()
+            
+            if self.cont.axis2 != 0:
+                speed = -int(255*self.cont.axis2)
+                self.robot.turn(speed)
+                rAnalogMoved = 1
+
+            if self.cont.axis2 == 0 and rAnalogMoved:
+                self.robot.stop()
+                rAnalogMoved = 0
+
+            if self.cont.btn7:
+                speed = int(127.5 + (127.5*self.cont.axis4))
+                r2Pressed = 1
+                self.robot.forward(speed) 
+            
+            if self.cont.btn7 == 0 and r2Pressed:
+                self.robot.stop()
+                r2Pressed = 0
+
+            if self.cont.btn6:
+                speed = int(127.5 + (127.5*self.cont.axis3))
+                l2Pressed = 1
+                self.robot.reverse(speed)
+
+            if self.cont.btn6 == 0 and l2Pressed:
+                self.robot.stop()
+                l2Pressed = 0
 
     def close(self):
+        self.robot.stop()
         if self.joystick:
             self.joystick.quit()
 
@@ -65,13 +113,7 @@ DPWM = 11
 STDBY1 = 0
 STDBY2 = 1
 
-def driveMotors(FR, BR, FL, BL, speed, a):
-    FR.drive(speed, a)
-    BR.drive(speed, a)
-    FL.drive(-speed, a)
-    BL.drive(-speed, a)
-
-def arduinoSetup():
+def robotSetup():
     try:
         connection = SerialManager()
         a = ArduinoApi(connection = connection)
@@ -97,8 +139,11 @@ def arduinoSetup():
     a.digitalWrite(STDBY1, a.HIGH)
     a.digitalWrite(STDBY2, a.HIGH)
     
-    return a
+    robot = Robot(FR, BR, FL, BL, a)
 
+    return robot
+
+'''
 try:
     connection = SerialManager()
     a = ArduinoApi(connection = connection)
@@ -123,35 +168,20 @@ BL.setupMotor(a)
 
 a.digitalWrite(STDBY1, a.HIGH)
 a.digitalWrite(STDBY2, a.HIGH)
- 
-pygame.init()
-j = pygame.joystick.Joystick(0)
-j.init()
+'''
+robot = robotSetup()
+rc = RobotController(robot)
+rc.init_joystick()
 print("Init done")
 try:
     while True:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.JOYBUTTONDOWN:
-                if j.get_button(1):
-                    driveMotors(FR, BR, FL, BL, 0, a)
-            elif event.type == pygame.JOYAXISMOTION:
-                print("Button pressed")
-                if j.get_button(6):
-                    reverseSpeed = -int(127.5 + (127.5*j.get_axis(3)))
-                    print(reverseSpeed)
-                    FR.drive(reverseSpeed, a)
-                    BR.drive(reverseSpeed, a)
-                    FL.drive(-reverseSpeed, a)
-                    BL.drive(-reverseSpeed, a)
-                    #driveMotors(FR, BR, FL, BL, reverseSpeed, a)
-                if j.get_button(7):
-                    forwardSpeed = int(127.5 + (127.5*j.get_axis(4)))
-                    print(forwardSpeed)
-                    driveMotors(FR, BR, FL, BL, forwardSpeed, a)
+        try:
+            rc.loop()
+        finally:
+            rc.close()
 
 except Exception as e:
-    driveMotors(FR, BR, FL, BL, 0, a)
+    rc.close()
     print(e)
 
 

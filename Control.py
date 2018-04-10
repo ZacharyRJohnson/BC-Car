@@ -45,13 +45,13 @@ class RobotController(object):
             self.cont.reset()
             pygame.event.pump()
 
-            for i in range(0, self.joystick.get_numaxes()):
+            for i in range(6):
                 val = self.joystick.get_axis(i)
-                if i in range(8) and val != 0:
+                if i in range(6) and val != 0:
                     tmp = "self.cont.axis" + str(i) + " = " + str(val)
                     exec(tmp)
 
-            for i in range(0, self.joystick.get_numbuttons()):
+            for i in range(9):
                 if self.joystick.get_button(i) != 0:
                     tmp = "self.cont.btn" + str(i) + " = 1"
                     exec(tmp)

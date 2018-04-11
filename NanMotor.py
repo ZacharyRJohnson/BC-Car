@@ -4,7 +4,6 @@ pins as attributes and can have methods called on it to drive the entire motor
 rather than having to set the pins every time.
 """
 from nanpy import (ArduinoApi, SerialManager)
-import math
 
 class Motor(object):
     """A motor hooked up to a sparkfun TB6612FNG dual motor driver

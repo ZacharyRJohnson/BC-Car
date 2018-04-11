@@ -143,6 +143,9 @@ def robotSetup():
 
     return robot
 
+def checkCont():
+    
+
 '''
 try:
     connection = SerialManager()
@@ -179,6 +182,7 @@ try:
             rc.loop()
         finally:
             rc.close()
+            break
 
 except Exception as e:
     rc.close()

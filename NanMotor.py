@@ -1,3 +1,8 @@
+"""
+Module used to make driving a motor with nanpy easier. Motor object has three
+pins as attributes and can have methods called on it to drive the entire motor
+rather than having to set the pins every time.
+"""
 from nanpy import (ArduinoApi, SerialManager)
 import math
 
@@ -22,6 +27,9 @@ class Motor(object):
         self.pwm = pwm
     
     def setupMotor(self, a):
+        """Setups all three motor pins to be output pins on the inputed
+        ArduinoApi object 'a'.
+        """
         a.pinMode(self.in1, a.OUTPUT)
         a.pinMode(self.in2, a.OUTPUT)
         a.pinMode(self.pwm, a.OUTPUT)
